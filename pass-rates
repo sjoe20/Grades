@@ -1,0 +1,278 @@
+#!/usr/bin/perl
+#
+# A simple Perl script to read in a CSV file and calculate the
+# pass rates for papers.
+#
+# Arguments are name of input file and name of output file.
+# The first four characters of the title of the input file should be the year.
+#
+# Headers in CSV file are:
+# Owning School Clevel, Paper Occurrence or Master Code, Isdomestic,
+# Prog Abbr, Result Status, Blank column. Then there are
+# 11 columns of passing grades, 7 columns of failing grades including
+# ... and NC. We shall ignore ... and treat NC as a fail.
+# 
+# Note that prior to 2016, there were just 10 columns of passing grades
+# and prior to 2014, there were just 6 columns of failing grades. The
+# script will exit if the year is before 2014.
+
+#
+# Output is in the form of a CSV file
+#
+open(GRADEDATA,$ARGV[0]);
+open(OUTPUT,">$ARGV[1]");
+
+$year = substr($ARGV[0], 0, 4);
+if ($year < 2016) {
+   $cols = 22;
+} else {
+   $cols = 23;
+}
+if ($year < 2014) {
+   printf "Warning: The year is prior to 2014 so this script will exit.\n";
+   exit;
+}
+
+$start = 0;
+
+$tot = 0;
+$wd = 0;
+$totpass = 0;
+
+$mf = 0;
+$mfpass = 0;
+
+$fci = 0;
+$fcipass = 0;
+
+$mf_level7 = 0;
+$mf_level7pass = 0;
+$mf_level8 = 0;
+$mf_level8pass = 0;
+
+$fci_level7 = 0;
+$fci_level7pass = 0;
+$fci_level8 = 0;
+$fci_level8pass = 0;
+
+while (<GRADEDATA>) {
+   $start += 1;
+#  Ignore first five header lines.
+   if ($start > 5) {
+      @grade = split(/,/,$_);
+      $papercode = $grade[1];
+
+      if ($start == 6) {
+         $oldpapercode = $papercode;
+      }
+      $level = substr($papercode, 4, 1);
+# Found new paper code and so print out results for previous paper code.
+      if ($papercode ne $oldpapercode) {
+         if ($tot > 0 and $wd != $tot) {
+            printf OUTPUT "%s,Total Enrolment,,%d,\n", $oldpapercode, $tot;
+            printf OUTPUT ",# passed,,%d,%6.2f\%\n", $totpass, 100*$totpass/$tot;
+            printf OUTPUT ",,,,\n";
+
+            printf OUTPUT ",Domestic total,,%d,\n", $mf;
+            if ($mf > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mfpass, 100*$mfpass/$mf;
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $mfpass;
+            }
+            printf OUTPUT ",,,,\n";
+           
+            printf OUTPUT ",International total,,%d,\n", $fci;
+            if ($fci > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fcipass, 100*$fcipass/$fci;
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $fcipass;
+            }
+            printf OUTPUT ",,,,\n";
+           
+            printf OUTPUT ",Domestic level 7,,%d,\n", $mf_level7;
+            if ($mf_level7 > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
+               if ($level le "4" and $mf_level7pass/$mf_level7 <= 0.6) {
+                  printf STDOUT "Warning: %d domestic level 7 students in %s had pass rate of %6.2f\%\n", $mf_level7, $oldpapercode, 100*$mf_level7pass/$mf_level7;
+               }
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $mf_level7pass;
+            }
+            printf OUTPUT ",,,,\n";
+
+            printf OUTPUT ",Domestic level >= 8,,%d,\n", $mf_level8;
+            if ($mf_level8 > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
+               if ($level le "4" and $mf_level8pass/$mf_level8 <= 0.6) {
+                  printf STDOUT "Warning: %d domestic level 8 students in %s had pass rate of %6.2f\%\n", $mf_level8, $oldpapercode, 100*$mf_level8pass/$mf_level8;
+               }
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $mf_level8pass;
+            }
+            printf OUTPUT ",,,,\n";
+           
+            printf OUTPUT ",International level 7,,%d,\n", $fci_level7;
+            if ($fci_level7 > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $fci_level7pass;
+            }
+            printf OUTPUT ",,,,\n";
+
+            printf OUTPUT ",International level >= 8,,%d,\n", $fci_level8;
+            if ($fci_level8 > 0) {
+               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
+            } else {
+               printf OUTPUT ",# passed,,%d,,\n", $fci_level8pass;
+            }
+            printf OUTPUT ",,,,\n";
+            printf OUTPUT ",,,,\n";
+         } else {
+            if ($tot > 0) {
+               printf STDOUT "Warning: All students in %s are WD students\n", $oldpapercode;
+            }
+            if ($tot == 0) {
+               printf STDOUT "Warning: Grades missing for %s\n", $oldpapercode;
+            }
+         }
+
+         $oldpapercode = $papercode;
+         $tot = 0;
+         $wd = 0;
+         $totpass = 0;
+
+         $mf = 0;
+         $mfpass = 0;
+
+         $fci = 0;
+         $fcipass = 0;
+
+         $mf_level7 = 0;
+         $mf_level7pass = 0;
+         $mf_level8 = 0;
+         $mf_level8pass = 0;
+
+         $fci_level7 = 0;
+         $fci_level7pass = 0;
+         $fci_level8 = 0;
+         $fci_level8pass = 0;
+      }
+
+      if (index($grade[4],"Total") > -1) {
+
+         for ($i = 6; $i < $cols - 6; $i++) {
+             $tot += $grade[$i];
+             $totpass += $grade[$i];
+             if ($grade[2] < 1) {
+                $fci += $grade[$i];
+                $fcipass += $grade[$i];
+                if (index($grade[3],"Hons") > -1 or $level ge "5") {
+                    $fci_level8 += $grade[$i];
+                    $fci_level8pass += $grade[$i];
+                } else {
+                    $fci_level7 += $grade[$i];
+                    $fci_level7pass += $grade[$i];
+                }
+             } else {
+                $mf += $grade[$i];
+                $mfpass += $grade[$i];
+                if (index($grade[3],"Hons") > -1 or $level ge "5") {
+                    $mf_level8 += $grade[$i];
+                    $mf_level8pass += $grade[$i];
+                } else {
+                    $mf_level7 += $grade[$i];
+                    $mf_level7pass += $grade[$i];
+                }
+            }
+         }
+         for ($i = $cols - 6; $i <= $cols; $i++) {
+# Element $cols-5 contains ...
+             if ($i != $cols - 5) {
+                $tot += $grade[$i];
+                if ($grade[2] < 1) {
+                   $fci += $grade[$i];
+                   if (index($grade[3],"Hons") > -1 or $level ge "5") {
+                       $fci_level8 += $grade[$i];
+                   } else {
+                       $fci_level7 += $grade[$i];
+                   }
+                } else {
+                   $mf += $grade[$i];
+                   if (index($grade[3],"Hons") > -1 or $level ge "5") {
+                       $mf_level8 += $grade[$i];
+                   } else {
+                       $mf_level7 += $grade[$i];
+                   }
+                }
+             }
+         }
+         $wd += $grade[$cols];
+      }
+   }
+}
+# Print out data for last paper code.
+if ($tot > 0 and $wd != $tot) {
+   printf OUTPUT "%s,Total Enrolment,,%d,\n", $oldpapercode, $tot;
+   printf OUTPUT ",# passed,,%d,%6.2f\%\n", $totpass, 100*$totpass/$tot;
+   printf OUTPUT ",,,,\n";
+
+   printf OUTPUT ",Domestic total,,%d,\n", $mf;
+   if ($mf > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mfpass, 100*$mfpass/$mf;
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $mfpass;
+   }
+   printf OUTPUT ",,,,\n";
+  
+   printf OUTPUT ",International total,,%d,\n", $fci;
+   if ($fci > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fcipass, 100*$fcipass/$fci;
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $fcipass;
+   }
+   printf OUTPUT ",,,,\n";
+  
+   printf OUTPUT ",Domestic level 7,,%d,\n", $mf_level7;
+   if ($mf_level7 > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
+      if ($level le "4" and $mf_level7pass/$mf_level7 <= 0.6) {
+         printf STDOUT "Warning: %d domestic level 7 students in %s had pass rate of %6.2f\%\n", $mf_level7, $oldpapercode, 100*$mf_level7pass/$mf_level7;
+      }
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $mf_level7pass;
+   }
+   printf OUTPUT ",,,,\n";
+
+   printf OUTPUT ",Domestic level >= 8,,%d,\n", $mf_level8;
+   if ($mf_level8 > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
+      if ($level le "4" and $mf_level8pass/$mf_level8 <= 0.6) {
+         printf STDOUT "Warning: %d domestic level 8 students in %s had pass rate of %6.2f\%\n", $mf_level7, $papercode, 100*$mf_level7pass/$mf_level7;
+      }
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $mf_level8pass;
+   }
+   printf OUTPUT ",,,,\n";
+  
+   printf OUTPUT ",International level 7,,%d,\n", $fci_level7;
+   if ($fci_level7 > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $fci_level7pass;
+   }
+   printf OUTPUT ",,,,\n";
+
+   printf OUTPUT ",International level >= 8,,%d,\n", $fci_level8;
+   if ($fci_level8 > 0) {
+      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
+   } else {
+      printf OUTPUT ",# passed,,%d,,\n", $fci_level8pass;
+   }
+} else {
+   if ($tot > 0) {
+      printf STDOUT "Warning: All students in %s are WD students\n", $oldpapercode;
+   }
+   if ($tot == 0) {
+      printf STDOUT "Warning: Grades missing for %s\n", $oldpapercode;
+   }
+}
