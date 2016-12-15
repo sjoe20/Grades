@@ -1,4 +1,3 @@
 # Grades
-Student grade analyses
-This repository contains Perl and shell scripts which analyse University of Waikato grades.
-Information about their usage is currently contained in the scripts themselves.
+This repository contains a Perl script which analyse University of Waikato grades for LPP issues.
+Information about its usage is currently contained in the script itself.
