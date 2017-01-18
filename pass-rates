@@ -3,35 +3,32 @@
 # A simple Perl script to read in a CSV file and calculate the
 # pass rates for papers.
 #
-# Arguments are name of input file and name of output file.
-# The first four characters of the title of the input file should be the year.
+# It is assumed that the data is grouped by Paper Master Code and then
+# Paper Occurrence.
 #
-# Headers in CSV file are:
-# Owning School Clevel, Paper Occurrence or Master Code, Isdomestic,
-# Prog Abbr, Result Status, Blank column. Then there are
-# 11 columns of passing grades, 7 columns of failing grades including
-# ... and NC. We shall ignore ... and treat NC as a fail.
-# 
-# Note that prior to 2016, there were just 10 columns of passing grades
-# and prior to 2014, there were just 6 columns of failing grades. The
-# script will exit if the year is before 2014.
-
+# Arguments are name of input file and name of output file. By default,
+# the analysis is based on paper master code. However, there is an optional
+# third argument of "-o" which will yield an analysis based on paper
+# occurrence.
+#
+# There should be a single header line in the CSV file.
+#
+# Headers searched for in this header line are:
+# Owning School Clevel, Paper Master Code, Paper Occurrence, Prog Abbr, 
+# Grade, Isdomestic, Result Status.
+#
+# The program will still run if "Owning School Clevel" or "Result Status"
+# are missing. However, it will exit if any of the other five headers
+# are missing.
+#
+# We shall ignore the ... grade and any "blank" grades.
 #
 # Output is in the form of a CSV file
 #
 open(GRADEDATA,$ARGV[0]);
 open(OUTPUT,">$ARGV[1]");
 
-$year = substr($ARGV[0], 0, 4);
-if ($year < 2016) {
-   $cols = 22;
-} else {
-   $cols = 23;
-}
-if ($year < 2014) {
-   printf "Warning: The year is prior to 2014 so this script will exit.\n";
-   exit;
-}
+@allgrades = qw(A+ A A- B+ B B- C+ C C- P RP IC ... D E F NC WD);
 
 $start = 0;
 
@@ -57,15 +54,20 @@ $fci_level8pass = 0;
 
 while (<GRADEDATA>) {
    $start += 1;
-#  Ignore first five header lines.
-   if ($start > 5) {
-      @grade = split(/,/,$_);
-      $papercode = $grade[1];
+   @grade = split(/,/,$_);
+#  Header line is processed differently to other lines.
+   if ($start > 1) {
+      $papercode = $grade[$col_master];
+      if ($ARGV[2] eq "-o") {
+         $papercode = $grade[$col_occur];
+      }
 
-      if ($start == 6) {
+      if ($start == 2) {
          $oldpapercode = $papercode;
       }
       $level = substr($papercode, 4, 1);
+      $prog = $grade[$col_prog];
+
 # Found new paper code and so print out results for previous paper code.
       if ($papercode ne $oldpapercode) {
          if ($tot > 0 and $wd != $tot) {
@@ -158,55 +160,118 @@ while (<GRADEDATA>) {
          $fci_level8pass = 0;
       }
 
-      if (index($grade[4],"Total") > -1) {
+      $actual_grade = $grade[$col_grade];
+#
+# Ignore ... and "blank" grades. Only process if we don't have this.
+#
+      if ($actual_grade ne "..." and $actual_grade ne "") {
+         $domestic = $grade[$col_domestic];
+         $tot ++; 
 
-         for ($i = 6; $i < $cols - 6; $i++) {
-             $tot += $grade[$i];
-             $totpass += $grade[$i];
-             if ($grade[2] < 1) {
-                $fci += $grade[$i];
-                $fcipass += $grade[$i];
-                if (index($grade[3],"Hons") > -1 or $level ge "5") {
-                    $fci_level8 += $grade[$i];
-                    $fci_level8pass += $grade[$i];
-                } else {
-                    $fci_level7 += $grade[$i];
-                    $fci_level7pass += $grade[$i];
-                }
-             } else {
-                $mf += $grade[$i];
-                $mfpass += $grade[$i];
-                if (index($grade[3],"Hons") > -1 or $level ge "5") {
-                    $mf_level8 += $grade[$i];
-                    $mf_level8pass += $grade[$i];
-                } else {
-                    $mf_level7 += $grade[$i];
-                    $mf_level7pass += $grade[$i];
-                }
+         if ($domestic < 1) {
+            $fci ++;
+            if (index($prog,"Hons") > -1 or $level ge "5") {
+               $fci_level8 ++;
+            } else {
+               $fci_level7 ++;
+            }
+         } else {
+           $mf ++; 
+            if (index($prog,"Hons") > -1 or $level ge "5") {
+               $mf_level8 ++;
+            } else {
+               $mf_level7 ++;
             }
          }
-         for ($i = $cols - 6; $i <= $cols; $i++) {
-# Element $cols-5 contains ...
-             if ($i != $cols - 5) {
-                $tot += $grade[$i];
-                if ($grade[2] < 1) {
-                   $fci += $grade[$i];
-                   if (index($grade[3],"Hons") > -1 or $level ge "5") {
-                       $fci_level8 += $grade[$i];
-                   } else {
-                       $fci_level7 += $grade[$i];
-                   }
-                } else {
-                   $mf += $grade[$i];
-                   if (index($grade[3],"Hons") > -1 or $level ge "5") {
-                       $mf_level8 += $grade[$i];
-                   } else {
-                       $mf_level7 += $grade[$i];
-                   }
-                }
+
+         $passing = 0;
+         for ($i = 0; $i < 11; $i++) {
+             if ($actual_grade eq $allgrades[$i]) {
+                $passing = 1;
              }
          }
-         $wd += $grade[$cols];
+         if ($passing == 1) {
+            $totpass ++;
+            if ($domestic < 1) {
+               $fcipass ++;
+               if (index($prog,"Hons") > -1 or $level ge "5") {
+                  $fci_level8pass ++;
+               } else {
+                  $fci_level7pass ++;
+               }
+            } else {
+               $mfpass ++; 
+               if (index($prog,"Hons") > -1 or $level ge "5") {
+                  $mf_level8pass ++;
+               } else {
+                  $mf_level7pass ++;
+               }
+            }
+         }
+         if ($actual_grade eq "WD") {
+            $wd ++;
+         }
+      }
+   } else {
+      $col_master = -1;
+      $col_occur = -1;
+      $col_prog = -1;
+      $col_grade = -1;
+      $col_school = -1;
+      $col_domestic = -1;
+      $col_status = -1;
+#
+# Look for headers in header line.
+#
+      for ($i = 0; $i <= $#grade; $i++) {
+          if ($grade[$i] eq "Paper Master Code" or
+              $grade[$i] eq "\"paper_master_code\"") {
+             $col_master = $i;
+          }
+          if ($grade[$i] eq "Paper Occurrence" or
+              $grade[$i] eq "\"paper_occurrence\"") {
+             $col_occur = $i;
+          }
+          if ($grade[$i] eq "Prog Abbr" or
+              $grade[$i] eq "\"prog_abbr\"") {
+             $col_prog = $i;
+          }
+          if ($grade[$i] eq "Grade" or
+              $grade[$i] eq "\"grade\"") {
+             $col_grade = $i;
+          }
+          if ($grade[$i] eq "Owning School Clevel" or
+              $grade[$i] eq "\"owning_school_clevel\"") {
+             $col_school = $i;
+          }
+          if ($grade[$i] eq "Isdomestic" or
+              $grade[$i] eq "\"isdomestic\"") {
+             $col_domestic = $i;
+          }
+          if ($grade[$i] eq "Result Status" or
+              $grade[$i] eq "\"result_status\"") {
+             $col_domestic = $i;
+          }
+      }
+      if ($col_master == -1) {
+         printf "Warning: Paper Master Code column missing - program exiting.\n";
+         exit;
+      }
+      if ($col_occur == -1) {
+         printf "Warning: Paper Occurrence column missing - program exiting.\n";
+         exit;
+      }
+      if ($col_prog == -1) {
+         printf "Warning: Programme Abbreviation column missing - program exiting.\n";
+         exit;
+      }
+      if ($col_grade == -1) {
+         printf "Warning: Grade column missing - program exiting.\n";
+         exit;
+      }
+      if ($col_domestic == -1) {
+         printf "Warning: Isdomestic column missing - program exiting.\n";
+         exit;
       }
    }
 }
