@@ -1,4 +1,6 @@
 #!/usr/bin/perl
+#use warnings;
+use strict;
 #
 # A simple Perl script to read in a CSV file and calculate the
 # pass rates for papers.
@@ -28,35 +30,64 @@
 open(GRADEDATA,$ARGV[0]);
 open(OUTPUT,">$ARGV[1]");
 
-@allgrades = qw(A+ A A- B+ B B- C+ C C- P RP IC ... D E F NC WD);
+my @allgrades = qw(A+ A A- B+ B B- C+ C C- P RP IC ... D E F NC WD);
 
-$start = 0;
+my $start = 0;
 
-$tot = 0;
-$wd = 0;
-$totpass = 0;
+my $tot = 0;
+my $wd = 0;
+my $totpass = 0;
 
-$mf = 0;
-$mfpass = 0;
+my $mf = 0;
+my $mfpass = 0;
 
-$fci = 0;
-$fcipass = 0;
+my $fci = 0;
+my $fcipass = 0;
 
-$mf_level7 = 0;
-$mf_level7pass = 0;
-$mf_level8 = 0;
-$mf_level8pass = 0;
+my $mf_level7 = 0;
+my $mf_level7pass = 0;
+my $mf_level8 = 0;
+my $mf_level8pass = 0;
 
-$fci_level7 = 0;
-$fci_level7pass = 0;
-$fci_level8 = 0;
-$fci_level8pass = 0;
+my $fci_level7 = 0;
+my $fci_level7pass = 0;
+my $fci_level8 = 0;
+my $fci_level8pass = 0;
+
+my $i;
+my $papercode;
+my $oldpapercode;
+my $prog;
+my $actual_grade;
+my $domestic;
+my $level;
+my $grade;
+my @grade;
+
+my $col_master;
+my $col_occur;
+my $col_prog;
+my $col_grade;
+my $col_school;
+my $col_domestic;
+my $col_status;
+
+use Text::CSV;
+my $csv = Text::CSV->new({sep_char => ','});
 
 while (<GRADEDATA>) {
    $start += 1;
-   @grade = split(/,/,$_);
+#  @grade = split(/,/,$_);
+
+   my $err = 0;
+   if ($csv->parse($_)) {
+      @grade = $csv->fields();
+   } else {
+#     printf STDOUT "Warning: Line %d could not be parsed and so ignored.\n",$start;
+      $err = 1; 
+   }
 #  Header line is processed differently to other lines.
-   if ($start > 1) {
+   if ($start > 1 and $err == 0) {
       $papercode = $grade[$col_master];
       if ($ARGV[2] eq "-o") {
          $papercode = $grade[$col_occur];
@@ -184,7 +215,7 @@ while (<GRADEDATA>) {
             }
          }
 
-         $passing = 0;
+         my $passing = 0;
          for ($i = 0; $i < 11; $i++) {
              if ($actual_grade eq $allgrades[$i]) {
                 $passing = 1;
@@ -213,65 +244,67 @@ while (<GRADEDATA>) {
          }
       }
    } else {
-      $col_master = -1;
-      $col_occur = -1;
-      $col_prog = -1;
-      $col_grade = -1;
-      $col_school = -1;
-      $col_domestic = -1;
-      $col_status = -1;
+      if ($start == 1) {
+         $col_master = -1;
+         $col_occur = -1;
+         $col_prog = -1;
+         $col_grade = -1;
+         $col_school = -1;
+         $col_domestic = -1;
+         $col_status = -1;
 #
 # Look for headers in header line.
 #
-      for ($i = 0; $i <= $#grade; $i++) {
-          if ($grade[$i] eq "Paper Master Code" or
-              $grade[$i] eq "\"paper_master_code\"") {
-             $col_master = $i;
-          }
-          if ($grade[$i] eq "Paper Occurrence" or
-              $grade[$i] eq "\"paper_occurrence\"") {
-             $col_occur = $i;
-          }
-          if ($grade[$i] eq "Prog Abbr" or
-              $grade[$i] eq "\"prog_abbr\"") {
-             $col_prog = $i;
-          }
-          if ($grade[$i] eq "Grade" or
-              $grade[$i] eq "\"grade\"") {
-             $col_grade = $i;
-          }
-          if ($grade[$i] eq "Owning School Clevel" or
-              $grade[$i] eq "\"owning_school_clevel\"") {
-             $col_school = $i;
-          }
-          if ($grade[$i] eq "Isdomestic" or
-              $grade[$i] eq "\"isdomestic\"") {
-             $col_domestic = $i;
-          }
-          if ($grade[$i] eq "Result Status" or
-              $grade[$i] eq "\"result_status\"") {
-             $col_domestic = $i;
-          }
-      }
-      if ($col_master == -1) {
-         printf "Warning: Paper Master Code column missing - program exiting.\n";
-         exit;
-      }
-      if ($col_occur == -1) {
-         printf "Warning: Paper Occurrence column missing - program exiting.\n";
-         exit;
-      }
-      if ($col_prog == -1) {
-         printf "Warning: Programme Abbreviation column missing - program exiting.\n";
-         exit;
-      }
-      if ($col_grade == -1) {
-         printf "Warning: Grade column missing - program exiting.\n";
-         exit;
-      }
-      if ($col_domestic == -1) {
-         printf "Warning: Isdomestic column missing - program exiting.\n";
-         exit;
+         for ($i = 0; $i <= $#grade; $i++) {
+             if ($grade[$i] eq "Paper Master Code" or
+                 $grade[$i] eq "paper_master_code") {
+                $col_master = $i;
+             }
+             if ($grade[$i] eq "Paper Occurrence" or
+                 $grade[$i] eq "paper_occurrence") {
+                $col_occur = $i;
+             }
+             if ($grade[$i] eq "Prog Abbr" or
+                 $grade[$i] eq "prog_abbr") {
+                $col_prog = $i;
+             }
+             if ($grade[$i] eq "Grade" or
+                 $grade[$i] eq "grade") {
+                $col_grade = $i;
+             }
+             if ($grade[$i] eq "Owning School Clevel" or
+                 $grade[$i] eq "owning_school_clevel") {
+                $col_school = $i;
+             }
+             if ($grade[$i] eq "Isdomestic" or
+                 $grade[$i] eq "isdomestic") {
+                $col_domestic = $i;
+             }
+             if ($grade[$i] eq "Result Status" or
+                 $grade[$i] eq "result_status") {
+                $col_status = $i;
+             }
+         }
+         if ($col_master == -1) {
+            printf STDOUT "Warning: Paper Master Code column missing - program exiting. - %d\n",$start;
+            exit;
+         }
+         if ($col_occur == -1) {
+            printf STDOUT "Warning: Paper Occurrence column missing - program exiting.\n";
+            exit;
+         }
+         if ($col_prog == -1) {
+            printf STDOUT "Warning: Programme Abbreviation column missing - program exiting.\n";
+            exit;
+         }
+         if ($col_grade == -1) {
+            printf STDOUT "Warning: Grade column missing - program exiting.\n";
+            exit;
+         }
+         if ($col_domestic == -1) {
+            printf STDOUT "Warning: Isdomestic column missing - program exiting.\n";
+            exit;
+         }
       }
    }
 }
