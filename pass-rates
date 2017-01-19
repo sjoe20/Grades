@@ -71,9 +71,9 @@ my $col_grade;
 my $col_school;
 my $col_domestic;
 my $col_status;
-
-use Text::CSV;
-my $csv = Text::CSV->new({sep_char => ','});
+use Text::CSV::Encoded;
+my $csv = Text::CSV::Encoded->new({sep_char => ',',
+                                   encoding_in  => "utf-8"});
 
 while (<GRADEDATA>) {
    $start += 1;
@@ -83,8 +83,36 @@ while (<GRADEDATA>) {
    if ($csv->parse($_)) {
       @grade = $csv->fields();
    } else {
-#     printf STDOUT "Warning: Line %d could not be parsed and so ignored.\n",$start;
-      $err = 1; 
+      if ($start == 1) {
+#
+# Try to fix problem in header line by removing any BOM that might be there.
+#
+# As encoding is UTF-8, we would expect to just encounter EF BB BF, but
+# have included other ones in case we change encoding.
+#
+# The five different BOMs searched for are:
+# 00 00 FE FF 	UTF-32, big-endian
+# FF FE 00 00 	UTF-32, little-endian
+# EF BB BF 	UTF-8
+# FE FF 	UTF-16, big-endian
+# FF FE 	UTF-16, little-endian
+#
+
+          $_ =~ s/^\x00\x00\xFE\xFF//; 
+          $_ =~ s/^\xFF\xFE\x00\x00//;
+          $_ =~ s/^\xEF\xBB\xBF//;
+          $_ =~ s/^\xFE\xFF//;
+          $_ =~ s/^\xFF\xFE//;
+          if ($csv->parse($_)) {
+             @grade = $csv->fields();
+          } else {
+             printf STDOUT "Warning: Header line could not be parsed - program will exit.\n";
+             exit;
+          }
+      } else {
+          printf STDOUT "Warning: Line %d could not be parsed and so ignored.\n",$start;
+          $err = 1; 
+      }
    }
 #  Header line is processed differently to other lines.
    if ($start > 1 and $err == 0) {
