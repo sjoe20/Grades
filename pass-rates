@@ -75,6 +75,7 @@ use Text::CSV::Encoded;
 my $csv = Text::CSV::Encoded->new({sep_char => ',',
                                    encoding_in  => "utf-8"});
 
+printf OUTPUT "Paper Code,Total Enrolment,Total Passed,Total Passed \%,Domestic Total,Domestic Passed,Domestic Passed \%,International Total,International Passed,International Passed \%,Domestic Level 7 Total,Domestic Level 7 Passed,Domestic Level 7 Passed \%,Domestic Level >=8 Total,Domestic Level >=8 Passed,Domestic Level >=8 Passed \%,International Level 7 Total,International Level 7 Passed,International Level 7 Passed \%,International Level >=8 Total,International Level >=8 Passed,International Level >=8 Passed \%\n";
 while (<GRADEDATA>) {
    $start += 1;
 #  @grade = split(/,/,$_);
@@ -130,64 +131,56 @@ while (<GRADEDATA>) {
 # Found new paper code and so print out results for previous paper code.
       if ($papercode ne $oldpapercode) {
          if ($tot > 0 and $wd != $tot) {
-            printf OUTPUT "%s,Total Enrolment,,%d,\n", $oldpapercode, $tot;
-            printf OUTPUT ",# passed,,%d,%6.2f\%\n", $totpass, 100*$totpass/$tot;
-            printf OUTPUT ",,,,\n";
+            printf OUTPUT "%s,%d,", $oldpapercode, $tot;
+            printf OUTPUT "%d,%6.2f\%,", $totpass, 100*$totpass/$tot;
 
-            printf OUTPUT ",Domestic total,,%d,\n", $mf;
+            printf OUTPUT "%d,", $mf;
             if ($mf > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mfpass, 100*$mfpass/$mf;
+               printf OUTPUT "%d,%6.2f\%,", $mfpass, 100*$mfpass/$mf;
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $mfpass;
+               printf OUTPUT "%d,,", $mfpass;
             }
-            printf OUTPUT ",,,,\n";
            
-            printf OUTPUT ",International total,,%d,\n", $fci;
+            printf OUTPUT "%d,", $fci;
             if ($fci > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fcipass, 100*$fcipass/$fci;
+               printf OUTPUT "%d,%6.2f\%,", $fcipass, 100*$fcipass/$fci;
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $fcipass;
+               printf OUTPUT "%d,,", $fcipass;
             }
-            printf OUTPUT ",,,,\n";
            
-            printf OUTPUT ",Domestic level 7,,%d,\n", $mf_level7;
+            printf OUTPUT "%d,", $mf_level7;
             if ($mf_level7 > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
+               printf OUTPUT "%d,%6.2f\%,", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
                if ($level le "4" and $mf_level7pass/$mf_level7 <= 0.6) {
                   printf STDOUT "Warning: %d domestic level 7 students in %s had pass rate of %6.2f\%\n", $mf_level7, $oldpapercode, 100*$mf_level7pass/$mf_level7;
                }
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $mf_level7pass;
+               printf OUTPUT "%d,,", $mf_level7pass;
             }
-            printf OUTPUT ",,,,\n";
 
-            printf OUTPUT ",Domestic level >= 8,,%d,\n", $mf_level8;
+            printf OUTPUT "%d,", $mf_level8;
             if ($mf_level8 > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
+               printf OUTPUT "%d,%6.2f\%,", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
                if ($level le "4" and $mf_level8pass/$mf_level8 <= 0.6) {
                   printf STDOUT "Warning: %d domestic level 8 students in %s had pass rate of %6.2f\%\n", $mf_level8, $oldpapercode, 100*$mf_level8pass/$mf_level8;
                }
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $mf_level8pass;
+               printf OUTPUT "%d,,", $mf_level8pass;
             }
-            printf OUTPUT ",,,,\n";
            
-            printf OUTPUT ",International level 7,,%d,\n", $fci_level7;
+            printf OUTPUT "%d,", $fci_level7;
             if ($fci_level7 > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
+               printf OUTPUT "%d,%6.2f\%,", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $fci_level7pass;
+               printf OUTPUT "%d,,", $fci_level7pass;
             }
-            printf OUTPUT ",,,,\n";
 
-            printf OUTPUT ",International level >= 8,,%d,\n", $fci_level8;
+            printf OUTPUT "%d,", $fci_level8;
             if ($fci_level8 > 0) {
-               printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
+               printf OUTPUT "%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
             } else {
-               printf OUTPUT ",# passed,,%d,,\n", $fci_level8pass;
+               printf OUTPUT "%d,\n", $fci_level8pass;
             }
-            printf OUTPUT ",,,,\n";
-            printf OUTPUT ",,,,\n";
          } else {
             if ($tot > 0) {
                printf STDOUT "Warning: All students in %s are WD students\n", $oldpapercode;
@@ -338,61 +331,55 @@ while (<GRADEDATA>) {
 }
 # Print out data for last paper code.
 if ($tot > 0 and $wd != $tot) {
-   printf OUTPUT "%s,Total Enrolment,,%d,\n", $oldpapercode, $tot;
-   printf OUTPUT ",# passed,,%d,%6.2f\%\n", $totpass, 100*$totpass/$tot;
-   printf OUTPUT ",,,,\n";
+   printf OUTPUT "%s,%d,", $oldpapercode, $tot;
+   printf OUTPUT "%d,%6.2f\%,", $totpass, 100*$totpass/$tot;
 
-   printf OUTPUT ",Domestic total,,%d,\n", $mf;
+   printf OUTPUT "%d,", $mf;
    if ($mf > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mfpass, 100*$mfpass/$mf;
+      printf OUTPUT "%d,%6.2f\%,", $mfpass, 100*$mfpass/$mf;
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $mfpass;
+      printf OUTPUT "%d,,", $mfpass;
    }
-   printf OUTPUT ",,,,\n";
   
-   printf OUTPUT ",International total,,%d,\n", $fci;
+   printf OUTPUT "%d,", $fci;
    if ($fci > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fcipass, 100*$fcipass/$fci;
+      printf OUTPUT "%d,%6.2f\%,", $fcipass, 100*$fcipass/$fci;
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $fcipass;
+      printf OUTPUT "%d,,", $fcipass;
    }
-   printf OUTPUT ",,,,\n";
   
-   printf OUTPUT ",Domestic level 7,,%d,\n", $mf_level7;
+   printf OUTPUT "%d,", $mf_level7;
    if ($mf_level7 > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
+      printf OUTPUT "%d,%6.2f\%,", $mf_level7pass, 100*$mf_level7pass/$mf_level7;
       if ($level le "4" and $mf_level7pass/$mf_level7 <= 0.6) {
          printf STDOUT "Warning: %d domestic level 7 students in %s had pass rate of %6.2f\%\n", $mf_level7, $oldpapercode, 100*$mf_level7pass/$mf_level7;
       }
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $mf_level7pass;
+      printf OUTPUT "%d,,", $mf_level7pass;
    }
-   printf OUTPUT ",,,,\n";
 
-   printf OUTPUT ",Domestic level >= 8,,%d,\n", $mf_level8;
+   printf OUTPUT "%d,", $mf_level8;
    if ($mf_level8 > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
+      printf OUTPUT "%d,%6.2f\%,", $mf_level8pass, 100*$mf_level8pass/$mf_level8;
       if ($level le "4" and $mf_level8pass/$mf_level8 <= 0.6) {
-         printf STDOUT "Warning: %d domestic level 8 students in %s had pass rate of %6.2f\%\n", $mf_level7, $papercode, 100*$mf_level7pass/$mf_level7;
+         printf STDOUT "Warning: %d domestic level 8 students in %s had pass rate of %6.2f\%\n", $mf_level8, $oldpapercode, 100*$mf_level8pass/$mf_level8;
       }
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $mf_level8pass;
+      printf OUTPUT "%d,,", $mf_level8pass;
    }
-   printf OUTPUT ",,,,\n";
   
-   printf OUTPUT ",International level 7,,%d,\n", $fci_level7;
+   printf OUTPUT "%d,", $fci_level7;
    if ($fci_level7 > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
+      printf OUTPUT "%d,%6.2f\%,", $fci_level7pass, 100*$fci_level7pass/$fci_level7;
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $fci_level7pass;
+      printf OUTPUT "%d,,", $fci_level7pass;
    }
-   printf OUTPUT ",,,,\n";
 
-   printf OUTPUT ",International level >= 8,,%d,\n", $fci_level8;
+   printf OUTPUT "%d,", $fci_level8;
    if ($fci_level8 > 0) {
-      printf OUTPUT ",# passed,,%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
+      printf OUTPUT "%d,%6.2f\%\n", $fci_level8pass, 100*$fci_level8pass/$fci_level8;
    } else {
-      printf OUTPUT ",# passed,,%d,,\n", $fci_level8pass;
+      printf OUTPUT "%d,\n", $fci_level8pass;
    }
 } else {
    if ($tot > 0) {
